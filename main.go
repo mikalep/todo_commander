@@ -1,13 +1,25 @@
 package main
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"strings"
 )
 
-// List all available options for the user
+type Todos []Todo
+
+type Todo struct {
+	Todo      string `json:"todo"`
+	Completed bool   `json:"completed"`
+}
+
 func listOptions() {
 
-	options := []string{"Show all tasks", "Change task status", "Add a new task", "Edit task", "Delete task", "Exit"}
+	options := []string{"Show all todos", "Toggle todo status", "Add a new todo", "Edit todo", "Delete todo", "Exit"}
 
 	for k, v := range options {
 		fmt.Println(k+1, "=>", v)
@@ -15,58 +27,167 @@ func listOptions() {
 
 }
 
-// Functions to handle each specific task
-func showAllTasks() {
-	fmt.Println("All tasks")
+func showAllTodos() {
+
+	fmt.Println("Here are your current todos:")
+
+	todos := readTodos()
+
+	json, err := json.MarshalIndent(todos, "", "    ")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(string(json))
+
 }
 
-func changeTaskStatus() {
-	fmt.Println("Status changed.")
+func toggleTodoStatus() {
+
+	var input int
+
+	allTodos := readTodos()
+
+	fmt.Println("Which todo entry would you like toggle?\n")
+
+	for i, v := range allTodos {
+		fmt.Println(i+1, v.Todo)
+	}
+
+	fmt.Scanln(&input)
+
+	allTodos[input-1].Completed = !allTodos[input-1].Completed
+
+	WriteTodos(allTodos)
+
+	fmt.Printf("Entry number %d marked as complete, well done!\n", input)
+
+	showAllTodos()
+
 }
 
-func addNewTask() {
-	fmt.Println("New task")
+func addNewTodo() {
+
+	var newTodo Todo
+
+	allTodos := readTodos()
+
+	fmt.Println("Name of todo:")
+
+	reader := bufio.NewReader(os.Stdin)
+
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	input = strings.TrimSuffix(input, "\n")
+
+	newTodo.Todo = input
+
+	allTodos = append(allTodos, newTodo)
+
+	WriteTodos(allTodos)
+
 }
 
-func editTask() {
-	fmt.Println("Edit task")
+func editTodo() {
+	fmt.Println("Edit todo")
 }
 
-func deleteTask() {
-	fmt.Println("Delete task")
+func deleteTodo() {
+
+	var input int
+
+	allTodos := readTodos()
+
+	for i, v := range allTodos {
+		fmt.Println(i+1, v.Todo)
+	}
+
+	fmt.Println("Which todo would you like to remove?\n")
+
+	fmt.Scanln(&input)
+
+	allTodos = append(allTodos[:input-1], allTodos[input:]...)
+
+	fmt.Printf("Entry number %d was successfully deleted.\n", input)
+
+	WriteTodos(allTodos)
+
 }
 
-// Handle the actual user choice
+func WriteTodos(allTodos Todos) {
+
+	b, err := json.MarshalIndent(allTodos, "", "    ")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = ioutil.WriteFile("todo.json", b, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func chooseAction() {
-
-	listOptions()
 
 	run := true
 
 	for run {
+
+		listOptions()
 
 		var choice int
 		fmt.Scanln(&choice)
 
 		switch {
 		case choice == 1:
-			showAllTasks()
+			showAllTodos()
 		case choice == 2:
-			changeTaskStatus()
+			toggleTodoStatus()
 		case choice == 3:
-			addNewTask()
+			addNewTodo()
 		case choice == 4:
-			editTask()
+			editTodo()
 		case choice == 5:
-			deleteTask()
+			deleteTodo()
 		case choice == 6:
 			run = false
+			fmt.Println("Bye friend!")
 		default:
 			fmt.Println("No such option! Please try again.")
-			listOptions()
 		}
 	}
 
+}
+
+func readTodos() Todos {
+
+	jsonFile, err := os.Open("todo.json")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer jsonFile.Close()
+
+	openedJsonFile, err := ioutil.ReadAll(jsonFile)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var todos Todos
+
+	err = json.Unmarshal(openedJsonFile, &todos)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return todos
 }
 
 func main() {
