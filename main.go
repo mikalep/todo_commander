@@ -34,7 +34,6 @@ func showAllTodos() {
 	todos := readTodos()
 
 	json, err := json.MarshalIndent(todos, "", "    ")
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,7 +92,41 @@ func addNewTodo() {
 }
 
 func editTodo() {
-	fmt.Println("Edit todo")
+
+	var (
+		todoToEdit     int
+		newNameForTodo string
+	)
+	// List all currently existing tasks(todos)
+	allTodos := readTodos()
+
+	// Ask which tasks name to edit(target with its index)
+	for i, v := range allTodos {
+		fmt.Println(i+1, v.Todo)
+	}
+	fmt.Println("Which todo would you like to edit?")
+
+	fmt.Scanln(&todoToEdit)
+
+	fmt.Println("New name for the todo:")
+
+	reader := bufio.NewReader(os.Stdin)
+
+	newNameForTodo, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	newNameForTodo = strings.TrimSuffix(newNameForTodo, "\n")
+
+	allTodos[todoToEdit-1].Todo = newNameForTodo
+
+	fmt.Printf("Todo number %d was successfully renamed.\n", todoToEdit)
+
+	WriteTodos(allTodos)
+
+	showAllTodos()
+
 }
 
 func deleteTodo() {
@@ -118,6 +151,7 @@ func deleteTodo() {
 
 }
 
+// TODO: possible to use pointer instead of copying
 func WriteTodos(allTodos Todos) {
 
 	b, err := json.MarshalIndent(allTodos, "", "    ")
@@ -166,7 +200,6 @@ func chooseAction() {
 func readTodos() Todos {
 
 	jsonFile, err := os.Open("todo.json")
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -174,7 +207,6 @@ func readTodos() Todos {
 	defer jsonFile.Close()
 
 	openedJsonFile, err := ioutil.ReadAll(jsonFile)
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -182,7 +214,6 @@ func readTodos() Todos {
 	var todos Todos
 
 	err = json.Unmarshal(openedJsonFile, &todos)
-
 	if err != nil {
 		log.Fatal(err)
 	}
